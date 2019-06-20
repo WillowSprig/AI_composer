@@ -1,10 +1,10 @@
 import urllib3
 import re
-
-#http = urllib3.PoolManager()
-#main_url = 'https://www.mutopiaproject.org/'
-#cat_url = 'https://www.mutopiaproject.org/cgibin/'
-
+"""
+http = urllib3.PoolManager()
+main_url = 'https://www.mutopiaproject.org/'
+cat_url = 'https://www.mutopiaproject.org/cgibin/'
+"""
 ftypes = {'ly': 'ly file',
           'midi': 'mid file'}
 
@@ -40,7 +40,7 @@ def get_files_list(ftype, style_page, curr_style_files, http, cat_url):
     if isnext != -1:
         next_page = style_page[isnext-300:isnext-1].split('a href=\"')[-1]
         page_content = http.request('GET', cat_url + next_page).data.decode('utf-8')
-        get_files_list(page_content, curr_style_files, http, cat_url)
+        get_files_list(ftype, page_content, curr_style_files, http, cat_url)
     return curr_style_files
 
         
