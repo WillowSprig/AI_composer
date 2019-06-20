@@ -39,4 +39,34 @@ def read_midi_files(style, style_files, http):
             midi_files[name] = mfile
     return midi_files
             
-
+def get_piece_info(mfile):
+    for msg in mfile.tracks[0]:
+        if msg.is_meta:
+            if msg.type == 'time_signature':
+                time_sign = (msg.numerator, msg.denominator)
+                whole_note = msg.clocks_per_click / 4
+            elif msg.type == 'set_tempo':
+                tempo = round(mido.tempo2bpm(msg.tempo))
+    return time_sign, tempo, whole_note
+            
+            
+def get_note_seqs(mfile, whole_note):
+    notes = {}
+    for track in mfile.tracks:
+        if track.name != 'control track':
+            track_notes = []
+            notes_on = []
+            times = []
+            for msg in track:
+            #queue for checking which note is on and their durations
+                if msg.type == 'note_on':
+                    notes_on.append(msg.note)
+                    times.append(msg.time)
+                elif msg.type == 'note_off':
+                    if msg.note in notes_on:
+                        #duration in N, where 1/N is a quotient of the whole note
+                        duration = (msg.time - times.pop(notes_on.index(msg.note))) / whole_note
+                        track_notes.append((msg.note, duration))
+                        notes_on.remove(msg.note)
+            notes[track.name] = track_notes
+    return notes
