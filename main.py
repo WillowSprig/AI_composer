@@ -10,6 +10,8 @@ http = urllib3.PoolManager()
 main_url = 'https://www.mutopiaproject.org/'
 cat_url = 'https://www.mutopiaproject.org/cgibin/'
 
+seq_length = 100
+
 """
 ##if file list hasn't been saved on disk:
 style_files = fs.get_styles_list(http, main_url, cat_url, 'midi')
@@ -28,11 +30,13 @@ source_files = fr.read_midi_files('March', style_files, http)
 time_sign, tempo, whole_note = fr.get_piece_info(source_files['TransitOfVenus.mid'])
 notes = fr.get_note_seqs(source_files['TransitOfVenus.mid'], whole_note)
 
-generator, model = gm.create_network(notes['upper'])
-gm.run_network(generator, model, 5)
-
+for staff in notes:
+    generator, model = gm.create_network(notes[staff][:,0])
+    prediction, gen_notes = gm.run_network(generator, model, seq_length, notes[staff][:,0])
+    generator, model = gm.create_network(notes[staff][:,1])
+    prediction, gen_times = gm.run_network(generator, model, seq_length, notes[staff][:,1])
+    print(gen_notes, gen_times)
 ##textgen = textgenrnn.textgenrnn()
 
 ##fg.generate_file(textgen, ly_files)
-
 

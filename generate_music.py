@@ -4,13 +4,14 @@ import keras.layers as klayers
 from keras.models import Sequential as Seq_model
 from keras.utils import to_categorical
 import numpy as np
+import tensorflow.data as tfData
 
 def create_network(data):
-
-    dataset_size = 255
-    batch_size = 20
+    dataset_size = len(data)
+    batch_size = 50
     num_steps = 10
-    hidden_size = 100
+    hidden_size = 200
+    num_epochs = 50
     ##reversed_dictionary = dict(zip(data.values(), data.keys()))
 
     model = Seq_model()
@@ -22,23 +23,25 @@ def create_network(data):
     model.add(klayers.TimeDistributed(klayers.Dense(dataset_size)))
     model.add(klayers.Activation('softmax'))
 
-    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
     
-    data_generator = KerasBatchGenerator(data, num_steps, batch_size, dataset_size, skip_step=num_steps)
+    data_generator = KerasBatchGenerator(data, num_steps, batch_size, dataset_size, skip_step=num_steps//2)
+    model.fit_generator(data_generator.generate(), steps_per_epoch=len(data)//(batch_size*num_steps), 
+                        epochs=num_epochs, shuffle=False)
     
-    return data_generator, model##, reversed_dictionary
+    return data_generator, model
 
 
-def run_network(generator, model, iterations, num_steps, dataset):
-    ret_value = ''
+def run_network(generator, model, iterations, dataset):
+    ret_value = []
     for i in range(iterations):
         data = next(generator.generate())
         prediction = model.predict(data[0])
-        ##num_steps = len(prediction)
+        num_steps = prediction.shape[1]
         
-        predict_word = np.argmax(prediction[:, num_steps-1, :])
-        ret_value += dataset[predict_word] + " "
-    print([i, ret_value])
+        predict_word = np.argmax(np.argmax(prediction[:, num_steps-1, :], 0))
+        ret_value.append(dataset[predict_word])
+    return prediction, ret_value
                         
                         
 class KerasBatchGenerator(object):
