@@ -1,6 +1,7 @@
 import urllib3
 import mido
 import os
+import numpy
 
 #http = urllib3.PoolManager()
 
@@ -68,5 +69,5 @@ def get_note_seqs(mfile, whole_note):
                         duration = (msg.time - times.pop(notes_on.index(msg.note))) / whole_note
                         track_notes.append((msg.note, duration))
                         notes_on.remove(msg.note)
-            notes[track.name] = track_notes
+            notes[track.name] = numpy.array(track_notes)
     return notes
