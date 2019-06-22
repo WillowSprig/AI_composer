@@ -52,7 +52,7 @@ def create_networks(notes_size=128, rhythm_size=21, num_steps=10, hidden_size=20
     return notes_model, rhythm_model, num_steps
 
 
-def train_networks(notes_model, rhythm_model, dataset, rhythm_dict=None, iterations=20, num_steps=10, batch_size=20,
+def run_networks(notes_model, rhythm_model, dataset, rhythm_dict=None, iterations=20, num_steps=10, batch_size=20,
                 num_epochs=20, notes_size=128, rhythm_size=21):
     ret_value = []
     if rhythm_dict == None:
@@ -64,11 +64,11 @@ def train_networks(notes_model, rhythm_model, dataset, rhythm_dict=None, iterati
 
     rhythm = [rhythm_dict[value] for value in dataset[:,1]]
     rhythm_generator = KerasBatchGenerator(rhythm, num_steps, batch_size, rhythm_size, skip_step=num_steps//2)
-    # model.fit(tfData.Dataset.from_tensors(dataset), steps_per_epoch=20,
-                        # epochs=num_epochs, shuffle=False)
-    notes_model.fit_generator(notes_generator.generate(), steps_per_epoch=dataset.shape[0]//(batch_size*num_steps),
+    steps_p_epoch = dataset.shape[0]//(batch_size*num_steps)
+    if steps_p_epoch == 0: steps_p_epoch = 1
+    notes_model.fit_generator(notes_generator.generate(), steps_per_epoch=steps_p_epoch,
                         epochs=num_epochs, shuffle=False)
-    rhythm_model.fit_generator(rhythm_generator.generate(), steps_per_epoch=dataset.shape[0]//(batch_size*num_steps),
+    rhythm_model.fit_generator(rhythm_generator.generate(), steps_per_epoch=steps_p_epoch,
                         epochs=num_epochs, shuffle=False)
 
     for i in range(iterations):

@@ -57,8 +57,8 @@ def write_midi_file(note_tracks, tempo_bpm, whole_note, time_sign=(4,4), file_na
         for note_no, duration in zip(notes[:,0], notes[:,1]):
             if duration > 0:
                 vel = [int(rand_uniform(65,127)), int(rand_uniform(65,127))]
-                track.append(mido.Message('note_on',  note=note_no, velocity=vel[0], time=int(0)))
-                track.append(mido.Message('note_off', note=note_no, velocity=vel[1], time=int(duration*whole_note)))
+                track.append(mido.Message('note_on',  note=int(note_no), velocity=vel[0], time=int(0)))
+                track.append(mido.Message('note_off', note=int(note_no), velocity=vel[1], time=int(duration*whole_note)))
         track.append(mido.MetaMessage('end_of_track', time=int(0)))
         mfile.tracks.append(track)
     if not os.path.isfile(file_name): os.mknod(file_name)
