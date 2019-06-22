@@ -2,7 +2,7 @@ import urllib3
 import mido
 import os
 import numpy
-
+from random import uniform as rand_uniform
 #http = urllib3.PoolManager()
 
 def load_MIDI_table(MIDI_conv):
@@ -25,6 +25,7 @@ def read_ly_files(style, style_files, http):
             files_content.append(file_content)
     return files_content
     
+    
 def read_midi_files(style, style_files, http):
     midi_files = {}
     
@@ -39,6 +40,31 @@ def read_midi_files(style, style_files, http):
             os.remove('tempmid')
             midi_files[name] = mfile
     return midi_files
+
+
+def write_midi_file(note_tracks, time_sign, tempo_bpm, whole_note, file_name='new_piece.mid'):
+    mfile = mido.MidiFile(ticks_per_beat=int(whole_note/4))
+    ctrack = mido.MidiTrack()
+    ctrack.append(mido.MetaMessage('track_name', name='control track'))
+    ctrack.append(mido.MetaMessage('time_signature', numerator=int(time_sign[0]), denominator=int(time_sign[1])))
+    ctrack.append(mido.MetaMessage('set_tempo', tempo=int(mido.bpm2tempo(tempo_bpm))))
+    ctrack.append(mido.MetaMessage('end_of_track'))
+    mfile.tracks.append(ctrack)
+    for t in note_tracks:
+        notes = note_tracks[t]
+        track = mido.MidiTrack()
+        track.append(mido.MetaMessage('track_name', name='track '+t))
+        track.append(mido.Message('program_change'))
+        for note_no, duration in zip(notes[:,0], notes[:,1]):
+            if duration > 0:
+                vel = [int(rand_uniform(65,127)), int(rand_uniform(65,127))]
+                track.append(mido.Message('note_on',  note=note_no, velocity=vel[0], time=int(0)))
+                track.append(mido.Message('note_off', note=note_no, velocity=vel[1], time=int(duration*whole_note)))
+        track.append(mido.MetaMessage('end_of_track', time=int(0)))
+        mfile.tracks.append(track)
+    if not os.path.isfile(file_name):
+        os.mknod(file_name)
+    mfile.save(file_name)
             
 def get_piece_info(mfile):
     whole_note = mfile.ticks_per_beat * 4
@@ -51,7 +77,7 @@ def get_piece_info(mfile):
     return time_sign, tempo, whole_note
             
             
-def get_note_seqs(mfile, whole_note):
+def get_note_seqs(mfile, whole_note, calculate_times=True):
     notes = {}
     for track in mfile.tracks:
         if track.name != 'control track':
@@ -69,8 +95,11 @@ def get_note_seqs(mfile, whole_note):
                         if msg.time == 0:
                             duraton = track_notes[-1][1]
                         else:
-                            duration = (msg.time - times.pop(notes_on.index(msg.note))) / whole_note
-                        track_notes.append((msg.note, duration))
+                            if calculate_times:
+                                duration = (msg.time - times.pop(notes_on.index(msg.note))) / whole_note
+                            else:
+                                duration = msg.time
+                        track_notes.append((int(msg.note), duration))
                         notes_on.remove(msg.note)
             notes[track.name] = numpy.array(track_notes)
     return notes
