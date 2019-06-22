@@ -20,10 +20,11 @@ def make_rhythm_dict():
     for idx in range(2):
         next.append(next[idx]+next[idx+4])
     next.append(next[0]+next[-1])
-    return dict(zip(next, range(len(next))))
+    rhythm_dict = dict(enumerate(next))
+    return rhythm_dict, dict(zip(rhythm_dict.values(), rhythm_dict.keys()))
 
 
-def create_networks(notes_size=128, rhythm_size=18, num_steps=10, hidden_size=200):
+def create_networks(notes_size=128, rhythm_size=21, num_steps=10, hidden_size=200):
     # create model for note numbers
     notes_model = Seq_model()
     notes_model.add(klayers.Embedding(notes_size, hidden_size, input_length=num_steps))
@@ -51,12 +52,18 @@ def create_networks(notes_size=128, rhythm_size=18, num_steps=10, hidden_size=20
     return notes_model, rhythm_model, num_steps
 
 
-def run_networks(notes_model, rhythm_model, dataset, rhythm_dict, iterations=20, num_steps=10, batch_size=20,
-                num_epochs=20, notes_size=128, rhythm_size=18):
+def run_networks(notes_model, rhythm_model, dataset, rhythm_dict=None, iterations=20, num_steps=10, batch_size=20,
+                num_epochs=20, notes_size=128, rhythm_size=21):
     ret_value = []
+    if rhythm_dict == None:
+        rev_dict, rhythm_dict = make_rhythm_dict()
+    else:
+        rev_dict = dict(zip(rhythm_dict.values(), rhythm_dict.keys()))
 
     notes_generator = KerasBatchGenerator(dataset[:,0], num_steps, batch_size, notes_size, skip_step=num_steps//2)
-    rhythm_generator = KerasBatchGenerator(dataset[:,1], num_steps, batch_size, rhythm_size, skip_step=num_steps//2)
+
+    rhythm = [rhythm_dict[value] for value in dataset[:,1]]
+    rhythm_generator = KerasBatchGenerator(rhythm, num_steps, batch_size, rhythm_size, skip_step=num_steps//2)
     # model.fit(tfData.Dataset.from_tensors(dataset), steps_per_epoch=20,
                         # epochs=num_epochs, shuffle=False)
     notes_model.fit_generator(notes_generator.generate(), steps_per_epoch=dataset.shape[0]//(batch_size*num_steps),
@@ -72,7 +79,7 @@ def run_networks(notes_model, rhythm_model, dataset, rhythm_dict, iterations=20,
 
         predict_note = notes_prediction[:, num_steps-1, :].argmax(0).argmax()
         predict_rhythm = rhythm_prediction[:, num_steps-1, :].argmax(0).argmax()
-        ret_value.append((predict_note, rhythm_dict[predict_rhythm]))
+        ret_value.append((predict_note, rev_dict[predict_rhythm]))
     return notes_prediction, rhythm_prediction, np.array(ret_value)
 
 
@@ -99,9 +106,8 @@ class KerasBatchGenerator(object):
         y = np.zeros((self.batch_size, self.num_steps, self.dataset_size))
         while True:
             for i in range(self.batch_size):
-                if self.current_idx + self.num_steps >= len(self.data):
-                    # reset the index back to the start of the data set
-                    self.current_idx = 0
+                # reset the index back to the start of the data set
+                if self.current_idx + self.num_steps >= len(self.data): self.current_idx = 0
                 x[i, :] = self.data[self.current_idx:self.current_idx + self.num_steps]
                 temp_y = self.data[self.current_idx + 1:self.current_idx + self.num_steps + 1]
                 # convert all of temp_y into a one hot representation

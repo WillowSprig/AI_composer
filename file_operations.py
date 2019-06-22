@@ -7,7 +7,7 @@ from random import uniform as rand_uniform
 
 def load_MIDI_table(MIDI_conv):
     notes = dict()
-    
+
     with open(MIDI_conv) as file:
         for line in file:
             number, name  = line.split(' ',1)
@@ -15,20 +15,20 @@ def load_MIDI_table(MIDI_conv):
             notes[number] = names
     return notes
 
-            
+
 def read_ly_files(style, style_files, http):
     files_content = list()
-    
+
     for file in style_files[style]:
         if '.ly' in file:
             file_content = http.request('GET', file).data.decode('utf-8')
             files_content.append(file_content)
     return files_content
-    
-    
+
+
 def read_midi_files(style, style_files, http):
     midi_files = {}
-    
+
     for file in style_files[style]:
         if '.mid' in file:
             name = file.rsplit('/',1)[1]
@@ -62,10 +62,9 @@ def write_midi_file(note_tracks, time_sign, tempo_bpm, whole_note, file_name='ne
                 track.append(mido.Message('note_off', note=note_no, velocity=vel[1], time=int(duration*whole_note)))
         track.append(mido.MetaMessage('end_of_track', time=int(0)))
         mfile.tracks.append(track)
-    if not os.path.isfile(file_name):
-        os.mknod(file_name)
+    if not os.path.isfile(file_name): os.mknod(file_name)
     mfile.save(file_name)
-            
+
 def get_piece_info(mfile):
     whole_note = mfile.ticks_per_beat * 4
     for msg in mfile.tracks[0]:
@@ -75,8 +74,8 @@ def get_piece_info(mfile):
             elif msg.type == 'set_tempo':
                 tempo = round(mido.tempo2bpm(msg.tempo))
     return time_sign, tempo, whole_note
-            
-            
+
+
 def get_note_seqs(mfile, whole_note, calculate_times=True):
     notes = {}
     for track in mfile.tracks:
@@ -99,7 +98,7 @@ def get_note_seqs(mfile, whole_note, calculate_times=True):
                                 duration = (msg.time - times.pop(notes_on.index(msg.note))) / whole_note
                             else:
                                 duration = msg.time
-                        track_notes.append((int(msg.note), duration))
+                        if duration>0: track_notes.append((int(msg.note), duration))
                         notes_on.remove(msg.note)
             notes[track.name] = numpy.array(track_notes)
     return notes
