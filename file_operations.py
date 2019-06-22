@@ -1,7 +1,7 @@
 import urllib3
 import mido
 import os
-import numpy
+import numpy as np
 from random import uniform as rand_uniform
 #http = urllib3.PoolManager()
 
@@ -36,13 +36,12 @@ def read_midi_files(style, style_files, http):
             with open('tempmid','wb') as temp_file:
                 temp_file.write(file_content)
             mfile = mido.MidiFile('tempmid')
-            print('File ' + name + ' processed succesfully!\n')
             os.remove('tempmid')
             midi_files[name] = mfile
     return midi_files
 
 
-def write_midi_file(note_tracks, time_sign, tempo_bpm, whole_note, file_name='new_piece.mid'):
+def write_midi_file(note_tracks, tempo_bpm, whole_note, time_sign=(4,4), file_name='new_piece.mid'):
     mfile = mido.MidiFile(ticks_per_beat=int(whole_note/4))
     ctrack = mido.MidiTrack()
     ctrack.append(mido.MetaMessage('track_name', name='control track'))
@@ -67,38 +66,46 @@ def write_midi_file(note_tracks, time_sign, tempo_bpm, whole_note, file_name='ne
 
 def get_piece_info(mfile):
     whole_note = mfile.ticks_per_beat * 4
+    time_sign = None
+    tempo = None
     for msg in mfile.tracks[0]:
         if msg.is_meta:
             if msg.type == 'time_signature':
                 time_sign = (msg.numerator, msg.denominator)
             elif msg.type == 'set_tempo':
                 tempo = round(mido.tempo2bpm(msg.tempo))
+    if time_sign == None: time_sign=(4, 4)
+    if tempo == None: tempo = 500000
     return time_sign, tempo, whole_note
 
 
-def get_note_seqs(mfile, whole_note, calculate_times=True):
+def get_note_seqs(mfile, whole_note, rhythm_list):
     notes = {}
-    for track in mfile.tracks:
-        if track.name != 'control track':
-            track_notes = []
-            notes_on = []
-            times = []
-            for msg in track:
-            #queue for checking which note is on and their durations
-                if msg.type == 'note_on':
-                    notes_on.append(msg.note)
-                    times.append(msg.time)
-                elif msg.type == 'note_off':
-                    if msg.note in notes_on:
-                        #duration in 1/N, a quotient of the whole note
-                        if msg.time == 0:
-                            duraton = track_notes[-1][1]
-                        else:
-                            if calculate_times:
-                                duration = (msg.time - times.pop(notes_on.index(msg.note))) / whole_note
-                            else:
-                                duration = msg.time
-                        if duration>0: track_notes.append((int(msg.note), duration))
-                        notes_on.remove(msg.note)
-            notes[track.name] = numpy.array(track_notes)
+    for track in mfile.tracks[1:]:
+        track_notes = []
+        notes_on = []
+        times = []
+        for msg in track:
+        #queue for checking which note is on and their durations
+            if ( msg.type == 'note_on' and msg.velocity >= 1 ):
+                notes_on.append(msg.note)
+                times.append(msg.time)
+            elif (
+                    ( msg.type == 'note_off'
+                     or (msg.type == 'note_on' and msg.velocity < 1)
+                    )
+                 and msg.note in notes_on
+                 ):
+                if msg.time == 0:
+                    duration = track_notes[-1][1]
+                else:
+                    #duration as a quotient of the whole note
+                    duration = (msg.time - times.pop(notes_on.index(msg.note))) / whole_note
+                if duration < 0 and msg.time > 0: duration = msg.time / whole_note
+                if duration not in rhythm_list:
+                    duration = rhythm_list[np.argmin(np.abs(rhythm_list-duration))]
+                track_notes.append((int(msg.note), duration))
+                notes_on.remove(msg.note)
+        if len(track_notes) > 0:
+            notes[track.name] = np.array(track_notes)
     return notes

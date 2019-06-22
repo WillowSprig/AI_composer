@@ -8,20 +8,20 @@ import tensorflow.data as tfData
 
 # create dictionary for rhythm values
 def make_rhythm_dict():
-    next = []
+    rhythm_list = []
     for pow in range(6):
-        next.append(1/(2**pow))
+        rhythm_list.append(1/(2**pow))
     for idx in range(5):
-        next.append(next[idx]+next[idx+1])
+        rhythm_list.append(rhythm_list[idx]+rhythm_list[idx+1])
     for idx in range(4):
-        next.append(next[idx]+next[idx+2])
+        rhythm_list.append(rhythm_list[idx]+rhythm_list[idx+2])
     for idx in range(3):
-        next.append(next[idx]+next[idx+3])
+        rhythm_list.append(rhythm_list[idx]+rhythm_list[idx+3])
     for idx in range(2):
-        next.append(next[idx]+next[idx+4])
-    next.append(next[0]+next[-1])
-    rhythm_dict = dict(enumerate(next))
-    return rhythm_dict, dict(zip(rhythm_dict.values(), rhythm_dict.keys()))
+        rhythm_list.append(rhythm_list[idx]+rhythm_list[idx+4])
+    rhythm_list.append(rhythm_list[0]+rhythm_list[-1])
+    rhythm_dict = dict(enumerate(rhythm_list))
+    return np.array(rhythm_list), rhythm_dict, dict(zip(rhythm_dict.values(), rhythm_dict.keys())) #reverse dict
 
 
 def create_networks(notes_size=128, rhythm_size=21, num_steps=10, hidden_size=200):
@@ -52,11 +52,11 @@ def create_networks(notes_size=128, rhythm_size=21, num_steps=10, hidden_size=20
     return notes_model, rhythm_model, num_steps
 
 
-def run_networks(notes_model, rhythm_model, dataset, rhythm_dict=None, iterations=20, num_steps=10, batch_size=20,
+def train_networks(notes_model, rhythm_model, dataset, rhythm_dict=None, iterations=20, num_steps=10, batch_size=20,
                 num_epochs=20, notes_size=128, rhythm_size=21):
     ret_value = []
     if rhythm_dict == None:
-        rev_dict, rhythm_dict = make_rhythm_dict()
+        rhythm_list, rev_dict, rhythm_dict = make_rhythm_dict()
     else:
         rev_dict = dict(zip(rhythm_dict.values(), rhythm_dict.keys()))
 
