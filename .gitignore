@@ -1,3 +1,11 @@
+# MIDI and Lilypond files
+*.mid
+*.midi
+*.ly
+
+# configuration json files
+*.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
